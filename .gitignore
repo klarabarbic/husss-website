@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+._*
+
+# editor cruft
+*.swp
+.idea/
+.vscode/

@@ -6,3 +6,6 @@
 *.swp
 .idea/
 .vscode/
+
+# original camera files (large HEIC); web-sized copies live in photos/
+mini_welcome_event_photos/

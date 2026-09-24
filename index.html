@@ -502,6 +502,16 @@ a{ color:var(--crimson); text-decoration-thickness:1px; text-underline-offset:3p
 .section--ink .ev{ background:#221A18; border-color:#3A2C29; }
 .ev:hover{ transform:translateY(-7px); box-shadow:var(--shadow-l); }
 
+.events__empty{
+  flex:1 1 100%;
+  margin:0; max-width:56ch;
+  text-align:center;
+  font-size:17px; font-style:italic; color:var(--ink-mute);
+  padding:34px 24px;
+  border:1px dashed var(--line); border-radius:14px;
+}
+.section--ink .events__empty{ color:#A2918C; border-color:#3A2C29; }
+
 .ev__cover{
   position:relative;
   aspect-ratio:16/10;
@@ -792,7 +802,17 @@ a{ color:var(--crimson); text-decoration-thickness:1px; text-underline-offset:3p
   padding:2px;
   columns:3 240px; column-gap:12px;
 }
-.collage figure{ margin:0 0 12px; break-inside:avoid; }
+/* reserve space before a photo arrives, so the masonry never collapses to
+   zero height and the layout does not jump as images come in */
+.collage figure{
+  margin:0 0 12px; break-inside:avoid;
+  aspect-ratio:3/4;
+  background:rgba(255,255,255,.07);
+  border-radius:9px;
+}
+.collage figure.is-loaded{ aspect-ratio:auto; background:none; }
+.collage figure img{ opacity:0; transition:opacity .5s var(--ease); }
+.collage figure.is-loaded img{ opacity:1; }
 .collage img{
   width:100%; border-radius:9px; cursor:zoom-in;
   box-shadow:0 10px 30px rgba(0,0,0,.4);
@@ -1380,23 +1400,33 @@ const BOARD = [
    as they are saved, then save this file and refresh the page.
    ========================================================================= */
 const EVENTS = {
-  upcoming: [
+  /* Nothing scheduled right now. Add the next event here and it appears
+     under "Upcoming Events"; until then that section shows a short note. */
+  upcoming: [],
+
+  past: [
     {
       title: "Mini Welcome Event",
       date:  "Thu 17 Sep 2026",
       meta:  "Thursday, September 17, 2026 &middot; 8:00 – 10:00 PM",
-      badge: "Next up",
-      teaser:"A mini social to welcome our incoming freshmen and announce this year's board.",
+      badge: "First of the year",
+      teaser:"An evening of food, music and introductions to open the academic year.",
       full: [
-        "A mini social event to welcome our new incoming freshmen, announce our board members, and hit the ground running for this academic year.",
-        "Come meet the people behind HUSSS, find the others from the region on campus, and hear what we have planned for the year ahead."
+        "The first gathering of the academic year, and a proper one: a lot of food, a lot of music, and a lot of fun. We welcomed our incoming freshmen, announced this year's board, and started the year the way we intend to carry on.",
+        "The spread ran to homemade burek, a deli and cheese platter, and a table of sweets from home. Most of the room was current HUSSS undergraduates, but not all of it. An alum came by, and a couple of guests joined at different points through the evening, which is exactly the mix we hope for."
       ],
-      cover:  "",          /* <-- add a cover photo file name here */
-      photos: []           /* <-- add photo file names here, e.g. ["welcome1.jpg","welcome2.jpg"] */
-    }
-  ],
-
-  past: [
+      cover:    "photos/welcome-03.jpg",
+      coverPos: "50% 45%",
+      photos: [
+        "photos/welcome-07.jpg",
+        "photos/welcome-05.jpg",
+        "photos/welcome-06.jpg",
+        "photos/welcome-03.jpg",
+        "photos/welcome-04.jpg",
+        "photos/welcome-01.jpg",
+        "photos/welcome-02.jpg"
+      ]
+    },
     {
       title: "Harvard × MIT South Slavic Social",
       date:  "Last academic year",
@@ -1576,7 +1606,8 @@ function card(ev, i, zone){
   const bodyId = `ev-${zone}-${i}-full`;
 
   const coverInner = ev.cover
-    ? `<img src="${encodeURI(ev.cover)}" alt="${esc(ev.title)}" loading="lazy">`
+    ? `<img src="${encodeURI(ev.cover)}" alt="${esc(ev.title)}" loading="lazy" decoding="async"
+            style="object-position:${escAttr(ev.coverPos || '50% 50%')}">`
     : `<div class="ev__ph"><span>Photos coming soon</span></div>`;
 
   el.innerHTML = `
@@ -1620,10 +1651,30 @@ function card(ev, i, zone){
   return el;
 }
 
+function emptyNote(text){
+  const el = document.createElement('p');
+  el.className = 'events__empty';
+  el.setAttribute('data-rise','');
+  el.innerHTML = text;
+  return el;
+}
+
 function paint(){
   const u = document.getElementById('upcomingList');
   const p = document.getElementById('pastList');
-  EVENTS.upcoming.forEach((ev,i) => u.appendChild(card(ev,i,'up')));
+
+  if (EVENTS.upcoming.length) {
+    EVENTS.upcoming.forEach((ev,i) => u.appendChild(card(ev,i,'up')));
+  } else {
+    // no cards, so the "open the three dots" hint above would make no sense.
+    // :not(.shead__kicker) matters here — the kicker is also a <p>.
+    const hint = document.querySelector('#upcoming .shead p:not(.shead__kicker)');
+    if (hint) hint.remove();
+    u.appendChild(emptyNote(
+      'Nothing on the calendar at the moment. The next one is never far off, so check back, ' +
+      'or email either president and we will make sure you hear about it.'));
+  }
+
   EVENTS.past.forEach((ev,i) => p.appendChild(card(ev,i,'past')));
 }
 paint();
@@ -1641,14 +1692,26 @@ function openGallery(ev){
   lbSub.innerHTML = ev.date;
 
   const n = ev.photos.length;
+  // The first images load eagerly. Anything lazy inside a freshly opened
+  // modal would otherwise never load: the masonry has no height until the
+  // images arrive, and a zero-height container never comes "near the
+  // viewport", so lazy loading never fires. The reserved aspect-ratio on
+  // .collage figure keeps that from happening to the lazy ones too.
   lbBody.innerHTML = n
-    ? `<div class="collage">${ev.photos.map(src =>
-        `<figure><img src="${encodeURI(src)}" alt="${esc(ev.title)}" loading="lazy"></figure>`).join('')}</div>`
+    ? `<div class="collage">${ev.photos.map((src, i) =>
+        `<figure><img src="${encodeURI(src)}" alt="${esc(ev.title)}" decoding="async"` +
+        `${i < 12 ? '' : ' loading="lazy"'}></figure>`).join('')}</div>`
     : `<div class="lb__empty"><strong>Photos coming soon</strong>
          We are still gathering pictures from this event. They will appear here once they are added.</div>`;
 
   lbBody.querySelectorAll('.collage img').forEach(img => {
     img.addEventListener('click', () => openZoom(img.currentSrc || img.src, img.alt));
+    const settle = () => img.parentElement.classList.add('is-loaded');
+    if (img.complete && img.naturalWidth > 0) settle();
+    else {
+      img.addEventListener('load', settle);
+      img.addEventListener('error', () => img.parentElement.remove());
+    }
   });
 
   lb.hidden = false;

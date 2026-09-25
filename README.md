@@ -1,94 +1,77 @@
 # HUSSS website
 
-The whole site is one file: `index.html`. Open it in any browser to view it.
-All images live in this same folder, so keep the folder together when you move or upload it.
+The website of the Harvard Undergraduate South Slavic Society, built with
+[Next.js](https://nextjs.org) (App Router, React, TypeScript) and ready to deploy on [Vercel](https://vercel.com).
+The whole site is prerendered to static HTML, so it is fast and costs nothing to host on Vercel's free plan.
 
-## Donations
+## Running it locally
 
-The Sponsors section carries a Zelle donation block: a "Donate with Zelle" button, the QR code, and the email address as a fallback. Near the bottom of `index.html`, find:
+You need Node.js 20.9 or newer.
 
-```js
-const DONATE = {
+```bash
+npm install
+npm run dev        # http://localhost:3000, reloads as you edit
+npm run build      # the same production build Vercel runs
 ```
 
-| Field | What it does |
+## Deploying on Vercel
+
+1. Push this repository to GitHub.
+2. On [vercel.com/new](https://vercel.com/new), import the repository. Vercel detects Next.js by itself,
+   so leave every setting at its default and click **Deploy**.
+3. Every push to `main` then redeploys the site automatically, and every other branch or pull request gets its
+   own preview link.
+
+Or, from this folder, run `npx vercel` for a preview and `npx vercel --prod` for production.
+
+### Adding a custom domain later
+
+In the Vercel project, open **Settings → Domains**, add the domain, and create the DNS records Vercel shows you
+at your domain registrar. Nothing in the code needs to change: link previews, the sitemap and `robots.txt` pick up
+the production domain automatically. To force a specific address, set `NEXT_PUBLIC_SITE_URL`
+(e.g. `https://husss.org`) under **Settings → Environment Variables** and redeploy.
+
+## Where things live
+
+| Path | What it is |
 | --- | --- |
-| `qr` | the QR image file. Empty or missing hides the QR frame, leaving the button |
-| `url` | where the button goes. Taken from inside the QR, so both point to the same account |
-| `email` | shown as the type-it-by-hand fallback. Empty hides that line |
-| `recipient` | the full name Zelle displays. Empty hides the "payments go to" line |
+| `content/board.ts` | board members: names, roles, headshots, bios, emails, LinkedIn |
+| `content/events.ts` | upcoming and past events, covers and photo galleries |
+| `content/donate.ts` | the Venmo donation block |
+| `content/site.ts` | site name, description, countries, navigation links, Instagram handle |
+| `app/page.tsx` | the page itself: About, Sponsors and footer text |
+| `app/globals.css` | all of the styling |
+| `app/layout.tsx` | page title, description and link-preview settings |
+| `app/favicon.ico`, `app/icon.png`, `app/apple-icon.png`, `app/manifest.ts` | tab and home-screen icons, made from `public/husss-crest.png` |
+| `app/opengraph-image.jpg` | the picture shown when the link is shared |
+| `components/` | the interactive parts: nav, cover, board cards and bio panel, schedule, event cards, gallery |
+| `lib/schedule.ts` | dates and times, the upcoming/past split, the semester ribbon, calendar links and the `.ics` feed |
+| `public/` | images served as-is: `husss-logo.jpg` (original, used for the cover texture), `husss-crest.png` (transparent cut-out used in the nav, footer and icons), Venmo QR code, `stitch.svg` (the embroidery motif), `board/` headshots, `photos/` event pictures |
 
-`zelle_qr.png` is the QR cropped out of `donation_qr_code.png` with a white quiet zone around it. It was cropped without resampling, and both files decode to the identical payload, so the code is unchanged. If you ever replace the QR, drop in the new file and update `url` to match what the new code contains, or the button and the code will point to different accounts.
+Most updates only touch the three files in `content/`. Each one opens with a comment explaining every field.
 
-## Adding LinkedIn links to board members
+## Common edits
 
-Near the bottom of `index.html`, find the block that starts with:
+**Board members.** Edit `content/board.ts`. Put headshots in `public/board/` and reference them as
+`"/board/name.jpg"`. `pos` controls the crop inside the frame; lower the second number to show more forehead,
+raise it to show more chin. An empty `linkedin: ""` hides the LinkedIn button.
 
-```js
-const BOARD = [
-```
+**Events.** Edit `content/events.ts`. For a new event, add a block to `upcoming` with a `title`, a `start` in Boston
+time (`"2026-10-16T20:00"`), and optionally `end`, `location` and `rsvp`. That one block drives everything:
 
-Each person has a `linkedin` field that starts empty. While it is empty, no LinkedIn button appears for them. Paste in the full profile URL to switch it on:
+- the **Next up** spotlight: a wall-calendar page, a live countdown, and Google / Apple / Outlook calendar buttons
+- a **Next gathering** pill on the cover
+- a ticket stub for each later event
+- a gem on the **semester ribbon**, which is embroidered up to today
+- the **calendar feed** at `/calendar.ics`, which people subscribe to once from the "Never miss a gathering" panel
 
-```js
-linkedin: "https://www.linkedin.com/in/your-handle/"
-```
+Once an event has ended it moves to Past Events by itself (the page refreshes hourly on Vercel). Then add its
+`cover` and `photos`. Put photos in `public/photos/` and reference them as `"/photos/file.jpg"`, matching
+upper/lower case exactly. For big galleries, add a folder of small copies with the same file names and point
+`thumbs` at it (see the Harvard × MIT social). While nothing is scheduled, the section shows a "Something is
+cooking" card listing every event marked `recurring` (e.g. Palačinka Night).
 
-The same block holds each person's `email` and `bio`, so edit those here too. `pos` controls how the headshot is cropped inside its frame; the second number is the vertical position, so lower it to show more forehead and raise it to show more chin.
-
-## Adding event photos later
-
-Open `index.html` in a text editor and scroll to the bottom, to the block that starts with:
-
-```js
-const EVENTS = {
-```
-
-Every event has two photo slots:
-
-| Slot | What it does |
-| --- | --- |
-| `cover` | the single big picture at the top of the event card |
-| `photos` | the collage that opens behind the gallery icon |
-
-Steps:
-
-1. Put the image files into this folder.
-2. Type their file names into `cover` and `photos`, exactly as saved, including the extension and matching upper/lower case.
-3. Save the file and refresh the page.
-
-Example, for the Harvard × MIT social:
-
-```js
-cover:  "mit_social_cover.jpg",
-photos: ["mit_social_1.jpg", "mit_social_2.jpg", "mit_social_3.jpg"]
-```
-
-Leave `cover` as `""` and `photos` as `[]` for events with no pictures yet. The card then shows a crimson placeholder and the gallery icon stays hidden until photos exist.
-
-## Adding a new event
-
-Copy one existing block inside `EVENTS.upcoming` or `EVENTS.past` and edit the fields:
-
-- `title` — the event name
-- `date` — the short label shown on the cover
-- `meta` — the small line under the title
-- `badge` — the small crimson pill, or delete the line to hide it
-- `teaser` — one sentence, always visible
-- `full` — the paragraphs that appear when the three dots are clicked
-
-## Putting it online
-
-Any static host works, because there is no build step and no server code. Upload the entire folder and point the host at `index.html`. Harvard student groups commonly use GitHub Pages, Netlify, or a Harvard-provided web space.
-
-## Files
-
-| File | Use |
-| --- | --- |
-| `index.html` | the entire website |
-| `husss_logo.JPG` | crest, used in the cover, the nav, the About panel and the footer |
-| `klara_headshot.jpg` | Klara Barbić |
-| `djordje_headshot.png` | Đorđe Ivanović |
-| `sabrina_headshot.jpeg` | Sabrina Bukvarević |
-| `benjamin_headshot.jpg` | Benjamin Mujkić |
-| `tian_headshot.jpeg` | Tian Vlašić |
+**Donations.** Edit `content/donate.ts`. Donations go through Venmo to @husouthslavs. `public/venmo-qr.svg`
+encodes `https://venmo.com/u/husouthslavs`, which opens that profile in the Venmo app. If the handle ever changes,
+regenerate the QR for the new address (any QR generator works, e.g. `npx qrcode -o public/venmo-qr.svg
+"https://venmo.com/u/NEWHANDLE"`), or the button and the code will point to different accounts.

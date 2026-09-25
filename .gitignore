@@ -1,3 +1,22 @@
+# dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Vercel
+.vercel/
+
+# env files (none are needed today; keep secrets out of git if you add any)
+.env*
+!.env.example
+
+# logs
+npm-debug.log*
+
 # macOS
 .DS_Store
 ._*
@@ -7,7 +26,7 @@
 .idea/
 .vscode/
 
-# original camera files (large HEIC); web-sized copies live in photos/
+# original camera files (large HEIC); web-sized copies live in public/photos/
 mini_welcome_event_photos/
 
 # original camera files for the MIT social (2.5GB of RAW-size JPG/PNG + video)
